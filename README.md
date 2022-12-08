@@ -2,4 +2,6 @@
 
 TODO:
 -----
-- paddle angle on ball
+- add new block types
+- make some block art - pictures or spots? smiley face?
+- make some new playing fields
