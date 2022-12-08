@@ -76,7 +76,7 @@ pad;
 
 struct Ball {
 	uint8_t w = 8, h = 8;
-	float x = (160 - 8) / 2, y = 160 - 4*8;
+	float x = 0, y = 0;
 	float dx = 0, dy = 0, v = 2;
 	uint8_t stuck = 1;
 }
@@ -85,7 +85,7 @@ ball;
 void resetball() {
 	ball.x = pad.x + (pad.w - ball.w) / 2;
 	ball.y = pad.y - ball.h;
-	ball.dx = 0.5, ball.dy = 0.5; //, ball.v = 2;
+	ball.dx = 0.5, ball.dy = -0.5; //, ball.v = 2;
 	ball.stuck = 1;
 }
 
@@ -110,22 +110,29 @@ void update() {
 	// bouncing ball movement
 	else {
 		int8_t b = 0;
-		// block strike next x position
+
+		// block strike at next x position
 		b = page.collideblock(int(ball.x + ball.dx * ball.v), int(ball.y), ball.w, ball.h);
 		if      (b == 0) ball.x += ball.dx * ball.v;
 		else if (b < 0) ball.dx *= -1;
 		else    ball.dx *= -1, score += (int8_t)b;
-		// block strike next y position
+
+		// block strike at next y position
 		b = page.collideblock(int(ball.x), int(ball.y + ball.dy * ball.v), ball.w, ball.h);
 		if      (b == 0) ball.y += ball.dy * ball.v;
 		else if (b < 0) ball.dy *= -1;
 		else    ball.dy *= -1, score += (int8_t)b;
+
 		// ball strikes paddle - bounce back up
 		if (collideboxf(ball.x, ball.y, ball.w, ball.h, pad.x, pad.y, pad.w, pad.h)) {
-			if (ball.dy > 0) ball.dy *= -1;  // rebound y
-			if (ball.x + ball.w / 2 <  pad.x && ball.dx > 0) ball.dx *= -1;  // rebound x - paddle left edge
-			if (ball.x + ball.w / 2 >= pad.x + pad.w && ball.dx < 0) ball.dx *= -1;  // rebound x - paddle right edge
+			float ballmid = ball.x + ball.w / 2.0f;
+			if      (ballmid <  pad.x - 2) ball.dx = -0.8f, ball.dy = -0.2f;  // paddle left edge
+			else if (ballmid >= pad.x + pad.w + 2) ball.dx = 0.8f, ball.dy = -0.2f;  // paddle right edge
+			else if (ballmid <  pad.x + 8) ball.dx = -0.65f, ball.dy = -0.35f;  // middle left reverse
+			else if (ballmid >= pad.x + pad.w - 8) ball.dx = 0.65f, ball.dy = -0.35f;  // middle right reverse
+			else    ball.dx = (ball.dx < 0 ? -0.5f : 0.5f), ball.dy = -0.5f;  // middle continue
 		}
+
 		// ball off bottom of screen - reset
 		if (ball.y > 160) resetball();
 	}
