@@ -77,7 +77,7 @@ pad;
 struct Ball {
 	uint8_t w = 8, h = 8;
 	float x = (160 - 8) / 2, y = 160 - 4*8;
-	float vx = 0, vy = 0;
+	float dx = 0, dy = 0, v = 2;
 	uint8_t stuck = 1;
 }
 ball;
@@ -85,7 +85,8 @@ ball;
 void resetball() {
 	ball.x = pad.x + (pad.w - ball.w) / 2;
 	ball.y = pad.y - ball.h;
-	ball.vx = 0, ball.vy = 0, ball.stuck = 1;
+	ball.dx = 0.5, ball.dy = 0.5; //, ball.v = 2;
+	ball.stuck = 1;
 }
 
 
@@ -98,38 +99,34 @@ void update() {
 	// manage state
 	framecount++;
 	gp.update();
-	// auto& page = map;
 
 	// move player
 	if (gp.down(BUTTON_LEFT) && pad.x > 8) pad.x--;
 	if (gp.down(BUTTON_RIGHT) && pad.x + pad.w < 160 - 8) pad.x++;
-	if (gp.down(BUTTON_1) && ball.stuck) ball.vx = 1, ball.vy = -1, ball.stuck = 0;
+	if (gp.down(BUTTON_1) && ball.stuck) ball.stuck = 0;
 
 	// sticky ball
-	if (ball.stuck) {
-		resetball();
-	}
+	if (ball.stuck) resetball();
 	// bouncing ball movement
 	else {
 		int8_t b = 0;
 		// block strike next x position
-		b = page.collideblock(int(ball.x + ball.vx), int(ball.y), ball.w, ball.h);
-		if      (b == 0) ball.x += ball.vx;
-		else if (b < 0) ball.vx *= -1;
-		else    ball.vx *= -1, score += (int8_t)b;
+		b = page.collideblock(int(ball.x + ball.dx * ball.v), int(ball.y), ball.w, ball.h);
+		if      (b == 0) ball.x += ball.dx * ball.v;
+		else if (b < 0) ball.dx *= -1;
+		else    ball.dx *= -1, score += (int8_t)b;
 		// block strike next y position
-		b = page.collideblock(int(ball.x), int(ball.y + ball.vy), ball.w, ball.h);
-		if      (b == 0) ball.y += ball.vy;
-		else if (b < 0) ball.vy *= -1;
-		else    ball.vy *= -1, score += (int8_t)b;
+		b = page.collideblock(int(ball.x), int(ball.y + ball.dy * ball.v), ball.w, ball.h);
+		if      (b == 0) ball.y += ball.dy * ball.v;
+		else if (b < 0) ball.dy *= -1;
+		else    ball.dy *= -1, score += (int8_t)b;
 		// ball strikes paddle - bounce back up
 		if (collideboxf(ball.x, ball.y, ball.w, ball.h, pad.x, pad.y, pad.w, pad.h)) {
-			if (ball.vy > 0) ball.vy *= -1;  // rebound y
-			if (ball.x + ball.w / 2 <  pad.x && ball.vx > 0) ball.vx *= -1;  // rebound x - paddle left edge
-			if (ball.x + ball.w / 2 >= pad.x + pad.w && ball.vx < 0) ball.vx *= -1;  // recount x - paddle right edge
+			if (ball.dy > 0) ball.dy *= -1;  // rebound y
+			if (ball.x + ball.w / 2 <  pad.x && ball.dx > 0) ball.dx *= -1;  // rebound x - paddle left edge
+			if (ball.x + ball.w / 2 >= pad.x + pad.w && ball.dx < 0) ball.dx *= -1;  // rebound x - paddle right edge
 		}
 		// ball off bottom of screen - reset
-		// if (ball.y > 160) ball.x = (160 - 8) / 2, ball.y = 160 - 4*8, ball.vx = 0, ball.vy = 0;
 		if (ball.y > 160) resetball();
 	}
 
