@@ -2,6 +2,7 @@
 
 TODO:
 -----
-- add new block types
-- make some block art - pictures or spots? smiley face?
-- make some new playing fields
+- make some new playing fields with new block art
+- level change wait / animation
+- intro splash art
+- win screen

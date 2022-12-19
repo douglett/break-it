@@ -5,8 +5,16 @@
 #include <math.h>
 
 
+enum GSTATE {
+	GSTATE_BOOT = 0,
+	GSTATE_MAINMENU,
+	GSTATE_PLAY,
+};
+
 uint32_t framecount = 0;
 uint16_t score = 0;
+uint16_t lives = 3;
+GSTATE   gamestate = GSTATE_BOOT;
 
 
 struct MapPage {
@@ -63,7 +71,7 @@ MapPage page;
 
 struct Paddle {
 	uint8_t w = 32, h = 8;
-	float x = (160 - 32)/2, y = 160 - 3*8;
+	float x = (160 - w)/2, y = 160 - 3*8;
 }
 pad;
 
@@ -75,6 +83,13 @@ struct Ball {
 }
 ball;
 
+
+/*** game functions ***/
+
+void resetpad() {
+	pad.x = (160 - pad.w) / 2;
+}
+
 void resetball() {
 	ball.x = pad.x + (pad.w - ball.w) / 2;
 	ball.y = pad.y - ball.h;
@@ -82,17 +97,7 @@ void resetball() {
 	ball.stuck = 1;
 }
 
-
-void start() {
-	// pal.icecream();
-	page = map1;
-}
-
-void update() {
-	// manage state
-	framecount++;
-	gp.update();
-
+void gameloop() {
 	// move player
 	if (gp.down(BUTTON_LEFT) && pad.x > 8) pad.x--;
 	if (gp.down(BUTTON_RIGHT) && pad.x + pad.w < 160 - 8) pad.x++;
@@ -127,12 +132,18 @@ void update() {
 		}
 
 		// ball off bottom of screen - reset
-		if (ball.y > 160) resetball();
+		if (ball.y > 160) {
+			if   (--lives == 0) gamestate = GSTATE_BOOT;
+			else resetball();
+		}
 	}
 
 	// draw UI
 	*DRAW_COLORS = 4;
-	text(mstring::lit("score ").catint(score).str(), 8, 152);
+	text(mstring::lit("score ").catint(score).str(), 1, 152);
+	*DRAW_COLORS = 0x40;
+	for (int i = 0; i < lives; i++)
+		blit(heart, 160 - 8*3 + 8*i, 152, 8, 8, BLIT_1BPP);
 
 	// draw map
 	*DRAW_COLORS = 0x1234;
@@ -149,4 +160,35 @@ void update() {
 	*DRAW_COLORS = 3;
 	rect((int)pad.x, (int)pad.y, pad.w, pad.h);
 	rect((int)ball.x, (int)ball.y, ball.w, ball.h);
+}
+
+void mainmenu() {
+	if (gp.released(BUTTON_1)) gamestate = GSTATE_PLAY;
+
+	*DRAW_COLORS = 4;
+	text("press \x80 to start!", 12, 80);
+}
+
+
+/*** wasm4 functions ***/
+
+void update() {
+	// manage state
+	framecount++;
+	gp.update();
+
+	// gamestate action
+	switch (gamestate) {
+		case GSTATE_BOOT:      start();  gamestate = GSTATE_MAINMENU;  break;
+		case GSTATE_MAINMENU:  mainmenu();  break;
+		case GSTATE_PLAY:      gameloop();  break;
+	}
+}
+
+void start() {
+	// pal.icecream();
+	lives = 3;
+	page = map1;
+	resetpad();
+	resetball();
 }
