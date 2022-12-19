@@ -1,6 +1,7 @@
 #include "wasm4.h"
 #include "etc.hpp"
 #include "mstring.hpp"
+#include "sprites.hpp"
 #include <math.h>
 
 
@@ -11,14 +12,6 @@ uint16_t score = 0;
 struct MapPage {
 	static const uint8_t WIDTH = 20, HEIGHT = 18, TSIZE = 8;
 	int8_t data[WIDTH * HEIGHT] = {0};
-	// int8_t collide(int x, int y, uint8_t w, uint8_t h) const {
-	// 	int8_t c = 0;
-	// 	if ((c = collidepoint(x, y))) return c;
-	// 	if ((c = collidepoint(x + w - 1, y))) return c;
-	// 	if ((c = collidepoint(x, y + h - 1))) return c;
-	// 	if ((c = collidepoint(x + w - 1, y + h - 1))) return c;
-	// 	return 0;
-	// }
 
 	// single point collision - returns a block id on collision
 	int8_t collidepoint(int x, int y) const {
@@ -47,12 +40,12 @@ const MapPage map1 = {
 	.data = {
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 		-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+		-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
 		-1,  0,  0,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  0,  0, -1,
-		-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
-		-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
-		-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
-		-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
-		-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+		-1,  0,  0,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  0,  0, -1,
+		-1,  0,  0,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  0,  0, -1,
+		-1,  0,  0,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  0,  0, -1,
+		-1,  0,  0,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  0,  0, -1,
 		-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
 		-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
 		-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
@@ -91,7 +84,7 @@ void resetball() {
 
 
 void start() {
-	pal.icecream();
+	// pal.icecream();
 	page = map1;
 }
 
@@ -138,21 +131,22 @@ void update() {
 	}
 
 	// draw UI
+	*DRAW_COLORS = 4;
 	text(mstring::lit("score ").catint(score).str(), 8, 152);
 
 	// draw map
+	*DRAW_COLORS = 0x1234;
 	for (int y = 0; y < page.HEIGHT; y++)
 	for (int x = 0; x < page.WIDTH; x++) {
-		switch (abs(page.data[y * page.WIDTH + x])) {
-			case 0:  continue;
-			case 1:  *DRAW_COLORS = 2;  break;
-			case 2:  *DRAW_COLORS = 3;  break;
+		int32_t t = abs(page.data[y * page.WIDTH + x]);  // tile number
+		if (t > 0) {
+			uint32_t sx = uint32_t(t - 1) * page.TSIZE;  // spritesheet source x
+			blitSub(bricks, x * page.TSIZE, y * page.TSIZE, page.TSIZE, page.TSIZE, sx, 0, bricksWidth, bricksFlags);
 		}
-		rect(x * page.TSIZE, y * page.TSIZE, page.TSIZE, page.TSIZE);
 	}
 
 	// draw player
-	*DRAW_COLORS = 4;
+	*DRAW_COLORS = 3;
 	rect((int)pad.x, (int)pad.y, pad.w, pad.h);
 	rect((int)ball.x, (int)ball.y, ball.w, ball.h);
 }

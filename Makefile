@@ -31,7 +31,7 @@ endif
 
 
 SRC = main.cpp
-HED = wasm4.h etc.hpp mstring.hpp
+HED = wasm4.h etc.hpp mstring.hpp sprites.hpp
 OUT = bin/cart.wasm
 
 
