@@ -9,6 +9,7 @@ enum GSTATE {
 	GSTATE_BOOT = 0,
 	GSTATE_MAINMENU,
 	GSTATE_PLAY,
+	GSTATE_PLAY_WAITNEXT,
 };
 
 uint32_t framecount = 0;
@@ -19,6 +20,7 @@ GSTATE   gamestate = GSTATE_BOOT;
 
 struct MapPage {
 	static const uint8_t WIDTH = 20, HEIGHT = 18, TSIZE = 8;
+	int8_t level = 0;
 	int8_t data[WIDTH * HEIGHT] = {0};
 
 	// single point collision - returns a block id on collision
@@ -43,8 +45,15 @@ struct MapPage {
 		}
 		return c;
 	}
+	// returns true if any blocks are remaning
+	int8_t blocksremaining() {
+		for (int i = 0; i < WIDTH * HEIGHT; i++)
+			if (data[i] > 0) return 1;
+		return 0;
+	}
 };
 const MapPage map1 = {
+	.level = 1,
 	.data = {
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 		-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
@@ -65,6 +74,26 @@ const MapPage map1 = {
 		-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
 		-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
 	}
+	// .data = {
+	// 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// 	-1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,
+	// }
 };
 MapPage page;
 
@@ -97,47 +126,7 @@ void resetball() {
 	ball.stuck = 1;
 }
 
-void gameloop() {
-	// move player
-	if (gp.down(BUTTON_LEFT) && pad.x > 8) pad.x--;
-	if (gp.down(BUTTON_RIGHT) && pad.x + pad.w < 160 - 8) pad.x++;
-	if (gp.down(BUTTON_1) && ball.stuck) ball.stuck = 0;
-
-	// sticky ball
-	if (ball.stuck) resetball();
-	// bouncing ball movement
-	else {
-		int8_t b = 0;
-
-		// block strike at next x position
-		b = page.collideblock(int(ball.x + ball.dx * ball.v), int(ball.y), ball.w, ball.h);
-		if      (b == 0) ball.x += ball.dx * ball.v;
-		else if (b < 0) ball.dx *= -1;
-		else    ball.dx *= -1, score += (int8_t)b;
-
-		// block strike at next y position
-		b = page.collideblock(int(ball.x), int(ball.y + ball.dy * ball.v), ball.w, ball.h);
-		if      (b == 0) ball.y += ball.dy * ball.v;
-		else if (b < 0) ball.dy *= -1;
-		else    ball.dy *= -1, score += (int8_t)b;
-
-		// ball strikes paddle - bounce back up
-		if (collideboxf(ball.x, ball.y, ball.w, ball.h, pad.x, pad.y, pad.w, pad.h)) {
-			float ballmid = ball.x + ball.w / 2.0f;
-			if      (ballmid <  pad.x - 2) ball.dx = -0.8f, ball.dy = -0.2f;  // paddle left edge
-			else if (ballmid >= pad.x + pad.w + 2) ball.dx = 0.8f, ball.dy = -0.2f;  // paddle right edge
-			else if (ballmid <  pad.x + 8) ball.dx = -0.65f, ball.dy = -0.35f;  // middle left reverse
-			else if (ballmid >= pad.x + pad.w - 8) ball.dx = 0.65f, ball.dy = -0.35f;  // middle right reverse
-			else    ball.dx = (ball.dx < 0 ? -0.5f : 0.5f), ball.dy = -0.5f;  // middle continue
-		}
-
-		// ball off bottom of screen - reset
-		if (ball.y > 160) {
-			if   (--lives == 0) gamestate = GSTATE_BOOT;
-			else resetball();
-		}
-	}
-
+void gamedraw() {
 	// draw UI
 	*DRAW_COLORS = 4;
 	text(mstring::lit("score ").catint(score).str(), 1, 152);
@@ -162,6 +151,70 @@ void gameloop() {
 	rect((int)ball.x, (int)ball.y, ball.w, ball.h);
 }
 
+void gameloop() {
+	// move player
+	if (gp.down(BUTTON_LEFT) && pad.x > 8) pad.x--;
+	if (gp.down(BUTTON_RIGHT) && pad.x + pad.w < 160 - 8) pad.x++;
+	if (gp.down(BUTTON_1) && ball.stuck) ball.stuck = 0;
+
+	// sticky ball
+	if (ball.stuck) resetball();
+	// bouncing ball movement
+	else {
+		int8_t b = 0, hit = 0;
+
+		// block strike at next x position
+		b = page.collideblock(int(ball.x + ball.dx * ball.v), int(ball.y), ball.w, ball.h);
+		if      (b == 0) ball.x += ball.dx * ball.v;
+		else if (b < 0) ball.dx *= -1;
+		else    ball.dx *= -1, score += (int8_t)b, hit = 1;
+
+		// block strike at next y position
+		b = page.collideblock(int(ball.x), int(ball.y + ball.dy * ball.v), ball.w, ball.h);
+		if      (b == 0) ball.y += ball.dy * ball.v;
+		else if (b < 0) ball.dy *= -1;
+		else    ball.dy *= -1, score += (int8_t)b, hit = 1;
+
+		// ball strikes paddle - bounce back up
+		if (collideboxf(ball.x, ball.y, ball.w, ball.h, pad.x, pad.y, pad.w, pad.h)) {
+			float ballmid = ball.x + ball.w / 2.0f;
+			if      (ballmid <  pad.x - 2) ball.dx = -0.8f, ball.dy = -0.2f;  // paddle left edge
+			else if (ballmid >= pad.x + pad.w + 2) ball.dx = 0.8f, ball.dy = -0.2f;  // paddle right edge
+			else if (ballmid <  pad.x + 8) ball.dx = -0.65f, ball.dy = -0.35f;  // middle left reverse
+			else if (ballmid >= pad.x + pad.w - 8) ball.dx = 0.65f, ball.dy = -0.35f;  // middle right reverse
+			else    ball.dx = (ball.dx < 0 ? -0.5f : 0.5f), ball.dy = -0.5f;  // middle continue
+		}
+
+		// ball off bottom of screen - reset
+		if (ball.y > 160) {
+			if   (--lives == 0) gamestate = GSTATE_BOOT;
+			else resetball();
+		}
+
+		// no bricks left - move to next level
+		if (hit && page.blocksremaining() == 0) gamestate = GSTATE_PLAY_WAITNEXT;
+	}
+
+	// repaint screen
+	gamedraw();
+}
+
+void gameloop_waitnext() {
+	// press a button to move to next map, or loop maps
+	if (gp.released(BUTTON_1)) {
+		switch (page.level) {
+			case 1:  page = map1;  break;
+		}
+		resetpad(), resetball(), gamestate = GSTATE_PLAY;
+	}
+
+	// repaint screen
+	gamedraw();
+	*DRAW_COLORS = 4;
+	text("good job!", (160 - 9 * 8) / 2, 80);
+	text("\x80 to continue", (160 - 13 * 8) / 2, 90);
+}
+
 void mainmenu() {
 	if (gp.released(BUTTON_1)) gamestate = GSTATE_PLAY;
 
@@ -179,15 +232,16 @@ void update() {
 
 	// gamestate action
 	switch (gamestate) {
-		case GSTATE_BOOT:      start();  gamestate = GSTATE_MAINMENU;  break;
-		case GSTATE_MAINMENU:  mainmenu();  break;
-		case GSTATE_PLAY:      gameloop();  break;
+		case GSTATE_BOOT:           start();  gamestate = GSTATE_MAINMENU;  break;
+		case GSTATE_MAINMENU:       mainmenu();  break;
+		case GSTATE_PLAY:           gameloop();  break;
+		case GSTATE_PLAY_WAITNEXT:  gameloop_waitnext();  break;
 	}
 }
 
 void start() {
 	// pal.icecream();
-	lives = 3;
+	lives = 3, score = 0;
 	page = map1;
 	resetpad();
 	resetball();
