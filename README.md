@@ -2,5 +2,5 @@
 
 TODO:
 -----
-- game over screen
 - upload!
+- sounds?

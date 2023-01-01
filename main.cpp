@@ -10,6 +10,7 @@ enum GSTATE {
 	GSTATE_MAINMENU,
 	GSTATE_PLAY,
 	GSTATE_PLAY_WAITNEXT,
+	GSTATE_GAMEOVER,
 };
 
 const uint16_t LIVES_MAX = 5;
@@ -261,7 +262,7 @@ void gameloop() {
 
 		// ball off bottom of screen - reset
 		if (ball.y > 160) {
-			if   (--lives == 0) gamestate = GSTATE_BOOT;
+			if   (--lives == 0) gamestate = GSTATE_GAMEOVER;
 			else resetball();
 		}
 
@@ -294,15 +295,30 @@ void gameloop_waitnext() {
 }
 
 void mainmenu() {
+	// next stage button
 	if (gp.released(BUTTON_1)) gamestate = GSTATE_PLAY;
-
+	// repaint screen
 	// *DRAW_COLORS = 0x1234;
 	// blit(splash, 0, 0, splashWidth, splashHeight, splashFlags);
 	*DRAW_COLORS = 3;
 	blit(splash2, 10, 40, splash2Width, splash2Height, splash2Flags);
-
 	*DRAW_COLORS = 4;
 	text("press \x80 to start!", 12, 100);
+}
+
+void gameover() {
+	static const char* msg[4] = {
+		"your hearts gone",
+		" your spirits down",
+		"  pick yourself up",
+		"   one more round!",
+	};
+	// main menu button
+	if (gp.released(BUTTON_1)) gamestate = GSTATE_BOOT;
+	// repaint screen
+	*DRAW_COLORS = 4;
+	for (int i = 0; i < 4; i++)
+		text(msg[i], 8, 60 + i * 8);
 }
 
 
@@ -319,6 +335,7 @@ void update() {
 		case GSTATE_MAINMENU:       mainmenu();  break;
 		case GSTATE_PLAY:           gameloop();  break;
 		case GSTATE_PLAY_WAITNEXT:  gameloop_waitnext();  break;
+		case GSTATE_GAMEOVER:       gameover();  break;
 	}
 }
 
