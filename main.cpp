@@ -298,8 +298,6 @@ void mainmenu() {
 	// next stage button
 	if (gp.released(BUTTON_1)) gamestate = GSTATE_PLAY;
 	// repaint screen
-	// *DRAW_COLORS = 0x1234;
-	// blit(splash, 0, 0, splashWidth, splashHeight, splashFlags);
 	*DRAW_COLORS = 3;
 	blit(splash2, 10, 40, splash2Width, splash2Height, splash2Flags);
 	*DRAW_COLORS = 4;
